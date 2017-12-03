@@ -32,16 +32,16 @@ this will go away, as you complete the code.
 //          k < 0 : means guard is waiting in the room
 //          k = 0 : means guard is in the hall of department
 //          k > 0 : means guard is IN the room
-int guard_state;         // waiting, in the hall, or in the room
-int num_students;        // number of students in the room
+//int guard_state;         // waiting, in the hall, or in the room
+//int num_students;        // number of students in the room
 
 
 // will malloc space for seeds[] in the main
 unsigned int *seeds;     // rand seeds for guard and students generating delays
 
 // NOTE:  globals below are initialized by command line args and never changed !
-int capacity;       // maximum number of students in a room
-int num_checks;     // number of times agent places supplies on table
+//int capacity;       // maximum number of students in a room
+int amount_of_stuff;     // number of times agent places supplies on table
 
 // *******************************************************************************
 // Code to be completed by you. See TODO comments.
@@ -55,7 +55,7 @@ binary_semaphore tobacco; //semaphore for person who only has tobacco
 binary_semaphore lighter; //semaphore for person who only has lighter
 
 //this function contains the logic for the agent
-inline void agent()
+inline void agent_place_table()
 {
   int selected_package;
   //aquire semaphore for table so no one else can
@@ -76,7 +76,32 @@ inline void agent()
   semWaitB(&table);
   printf("The agent has finished waiting for the smoker to smoke \n");
   printf("The agent will go outside for a while and then return \n");
-  
+  semSignalB(&table);
+}
+
+inline void smoker_smoke(long id)
+{
+  //aquire semaphore for the item that the smoker needs
+  //then once signaled by the agent, the smoker will have all items needed
+  if(id == TOBACCO_PAPERS){
+    semWaitB(&lighter);
+    printf("The smoker with a lighter has acquired tobacco and rolling papers \n");
+    semSignalB(&lighter);
+  }else if(id == LIGHTER_TOBACCO){
+    semWaitB(&papers);
+    printf("The smoker with rolling papers has acquired tobacco and a lighter \n");
+    semSignalB(&papers);
+  }else{
+    semWaitB(&tobacco);
+    printf("The smoker with tobacco has acquired a lighter and rolling papers \n");
+    semSignalB(&tobacco);
+  }
+  printf("The smoker is now smoking for a bit \n" );
+  smoke(id);
+  printf("The smoker has finished smoking \n" );
+  //signal table so the agent can proceed to go outside
+  semSignalB(&table);
+
 }
 
 
@@ -218,20 +243,21 @@ inline int rand_range(unsigned int *seedptr, long min, long max)
   return min + rand_r(seedptr) % (max - min + 1);
 }
 
-inline void study(long id)  // student studies for some random time
+inline void smoke(long id)  // smoker smokes for a period of time
 { // details of this function are unimportant for the assignment
   int ms = rand_range(&seeds[id], MIN_SLEEP, MAX_SLEEP);
-  printf("student %2ld studying in room with %2d students for %3d millisecs\n",
-	 id, num_students, ms);
+  printf("smoker %2ld smoking at table for %3d millisecs\n",
+	 id, ms);
   millisleep(ms);
 }
 
-inline void do_something_else(long id)    // student does something else
+inline void do_something_else(long id)    // smoker does something else
 { // details of this function are unimportant for the assignment
   int ms = rand_range(&seeds[id], MIN_SLEEP, MAX_SLEEP);
   millisleep(ms);
 }
 
+/*
 inline void assess_security()  // guard assess room security
 { // details of this function are unimportant for the assignment
   // NOTE:  we have (own) the mutex when we first enter this routine
@@ -241,39 +267,40 @@ inline void assess_security()  // guard assess room security
   millisleep(ms);
   printf("\tguard done assessing room security\n");
 }
+*/
 
-inline void guard_walk_hallway()  // guard walks the hallway
+inline void agent_go_outside()  // agent goes outside
 { // details of this function are unimportant for the assignment
   int ms = rand_range(&seeds[0], MIN_SLEEP, MAX_SLEEP/2);
-  printf("\tguard walking the hallway for %3d millisecs...\n", ms);
+  printf("\tagent goes outside for %3d millisecs...\n", ms);
   millisleep(ms);
 }
 
 // guard thread function  --- NO need to change this function !
-void* guard(void* arg)
+void* agent(void* arg)
 {
   int i;            // loop control variable
   srand(seeds[0]);  // seed the guard thread random number generator
 
   // the guard repeatedly checks the room (limited to num_checks) and
   // walks the hallway
-  for (i = 0; i < num_checks; i++) {
-    guard_check_room();
-    guard_walk_hallway();
+  for (i = 0; i < amount_of_stuff; i++) {
+    agent_place_table();
+    agent_go_outside();
   }
 
   pthread_exit((void*)0);   // thread needs to return a void*
 }
 
 // student thread function --- NO need to change this function !
-void* student(void* arg)
+void* smoker(void* arg)
 {
   long id = (long) arg;  // determine thread id from arg
   srand(seeds[id]);      // seed this threads random number generator
 
   // repeatedly study and do something else
   while (1) {
-    student_study_in_room(id);
+    smoker_smoke(id);
     do_something_else(id);
   }
 
@@ -287,9 +314,9 @@ void* student(void* arg)
 
 int main(int argc, char** argv)  // the main function
 {
-  int n = 0;               // number of student threads
-  pthread_t  cthread;      // guard thread
-  pthread_t* sthreads;     // student threads
+  int n = 3;               // number of smoker threads
+  pthread_t  athread;      // agent thread
+  pthread_t* sthreads;     // smoker threads
   long i;                  // loop control variable
 
   if (argc < 4) {
@@ -299,9 +326,9 @@ int main(int argc, char** argv)  // the main function
 
   // TODO: get three input parameters, convert, and properly store
   // HINT: use atoi() function (see man page for more details).
-  n = atoi(argv[1]);
-  capacity = atoi(argv[2]);
-  num_checks = atoi(argv[3]);
+  //n = atoi(argv[1]);
+  //capacity = atoi(argv[2]);
+  amount_of_stuff = atoi(argv[3]);
 
   // allocate space for the seeds[] array
   // NOTE: seeds[0] is guard seed, seeds[k] is the seed for student k
@@ -311,23 +338,28 @@ int main(int argc, char** argv)  // the main function
   sthreads = (pthread_t*) malloc(n*sizeof(pthread_t));
 
   // Initialize global variables and semaphores
-  guard_state = 0;   // not in room (walking the hall)
-  num_students = 0;  // number of students in the room
+  //guard_state = 0;   // not in room (walking the hall)
+  //num_students = 0;  // number of students in the room
 
-  semInitB(&mutex, 1);  // initialize mutex
+  //initialize semaphores to 0, so that they all function as blocks when waiting
+  semInitB(&table, 0);  // initialize mutex
   // TODO: for all your binary semaphores, complete the semaphore initializations
-  semInitB(&student_enter_room, 1);
-  semInitB(&student_leave_room, 1);
-  semInitB(&guard_wait_mutex, 1);
+  semInitB(&papers, 0);
+  semInitB(&tobacco, 0);
+  semInitB(&lighter, 0);
 
-  // initialize guard seed and create the guard thread
+  // initialize agent seed and create the agent thread
   seeds[0] = START_SEED;
-  pthread_create(&cthread, NULL, guard, (void*) NULL);
+  pthread_create(&athread, NULL, guard, (void*) NULL);
 
+  //create the smoker threads
   for (i = 1; i <= n; i++) {
     seeds[i] = START_SEED + i;
-    pthread_create(&sthreads[i-1], NULL, student, (void*) i);
+    pthread_create(&sthreads[i-1], NULL, smoker, (void*) i);
   }
+  // initialize agent seed and create the agent thread
+  seeds[0] = START_SEED;
+  pthread_create(&athread, NULL, agent, (void*) NULL);
 
   pthread_join(cthread, NULL);   // wait for guard thread to complete
 
