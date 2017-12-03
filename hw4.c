@@ -1,8 +1,9 @@
 /*
 CSCI 340 - Operating Systems
 Fall 2017
+340 Final Project
+Matthew Schwarz & Ricky Ramos
 
-Homework assignment #4
 
 NOTE: you will get a warning about unused variable, sthreads, but
 this will go away, as you complete the code.
@@ -22,6 +23,10 @@ this will go away, as you complete the code.
 #define MAX_SLEEP     100   // maximum sleep time in milliseconds
 
 #define START_SEED     11   // arbitrary value to seed random number generator
+//values for the items agent places on table
+#define TOBACCO_PAPERS 1
+#define LIGHTER_TOBACCO 2
+#define LIGHTER_PAPERS 3
 
 // guard_state with a value of k:
 //          k < 0 : means guard is waiting in the room
@@ -36,7 +41,7 @@ unsigned int *seeds;     // rand seeds for guard and students generating delays
 
 // NOTE:  globals below are initialized by command line args and never changed !
 int capacity;       // maximum number of students in a room
-int num_checks;     // number of checks the guard makes
+int num_checks;     // number of times agent places supplies on table
 
 // *******************************************************************************
 // Code to be completed by you. See TODO comments.
@@ -44,12 +49,39 @@ int num_checks;     // number of checks the guard makes
 
 // TODO:  list here the "handful" of semaphores you will need to synchronize
 //        I've listed one you will need for sure, to "get you going"
-binary_semaphore mutex;  // to protect shared variables (including semaphores)
-binary_semaphore student_enter_room;
-binary_semaphore student_leave_room;
-binary_semaphore guard_wait_mutex;
+binary_semaphore table;  // to protect the table
+binary_semaphore papers; //semaphore for person who only has papers
+binary_semaphore tobacco; //semaphore for person who only has tobacco
+binary_semaphore lighter; //semaphore for person who only has lighter
+
+//this function contains the logic for the agent
+inline void agent()
+{
+  int selected_package;
+  //aquire semaphore for table so no one else can
+  //semWaitB(&table);
+  //get a random number 1-3, this relates to what items agent places on table
+  selected_package = (rand() % 3) + 1;
+  if(selected_package == TOBACCO_PAPERS){
+    printf("The agent is placing tobacco and rolling papers on the table \n");
+    semSignalB(&lighter);
+  }else if(selected_package == LIGHTER_TOBACCO){
+    printf("The agent is placing tobacco and a lighter on the table \n");
+    semSignalB(&papers);
+  }else{
+    printf("The agent is placing a lighter and rolling papers on the table \n");
+    semSignalB(&tobacco);
+  }
+  //wait on table to be released by the smoker once they finish smoking
+  semWaitB(&table);
+  printf("The agent has finished waiting for the smoker to smoke \n");
+  printf("The agent will go outside for a while and then return \n");
+  
+}
+
 
 // this function contains the main synchronization logic for the guard
+/*
 inline void guard_check_room()
 {
   semWaitB(&mutex);
@@ -107,8 +139,10 @@ inline void guard_check_room()
   semSignalB(&mutex);
 
 }
+*/
 
 // this function contains the main synchronization logic for a student
+/*
 inline void student_study_in_room(long id)
 {
   semWaitB(&mutex);
@@ -159,6 +193,7 @@ inline void student_study_in_room(long id)
   }
 
 }
+*/
 
 
 // *******************************************************************************
