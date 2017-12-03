@@ -349,8 +349,8 @@ int main(int argc, char** argv)  // the main function
   semInitB(&lighter, 0);
 
   // initialize agent seed and create the agent thread
-  seeds[0] = START_SEED;
-  pthread_create(&athread, NULL, guard, (void*) NULL);
+  //seeds[0] = START_SEED;
+  //pthread_create(&athread, NULL, guard, (void*) NULL);
 
   //create the smoker threads
   for (i = 1; i <= n; i++) {
@@ -361,7 +361,7 @@ int main(int argc, char** argv)  // the main function
   seeds[0] = START_SEED;
   pthread_create(&athread, NULL, agent, (void*) NULL);
 
-  pthread_join(cthread, NULL);   // wait for guard thread to complete
+  pthread_join(athread, NULL);   // wait for guard thread to complete
 
   for (i = 0; i < n; i++) {
     pthread_kill(sthreads[i],0); // stop all threads (guard and students)

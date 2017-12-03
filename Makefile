@@ -20,4 +20,4 @@ run:
 
 tarball:
 	# put your tar command here
-	 tar -cvzf schwarz.tar.gz hw4.c
+	# tar -cvzf schwarz.tar.gz hw4.c
