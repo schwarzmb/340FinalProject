@@ -13,8 +13,11 @@ Each of the three smokers and the agent are all threads
 A total of 4 binary semaphores have been declared in this program
 
 To run our program, clone our repository to a directory of your choosing  
-Next, cd into the project and type: make  
+Next, open up a terminal and cd into the project  
+Type: make  
+Hit enter  
 Type: make run  
+Hit enter 
 You will be then prompted for how many iterations you would like to occur  
 Hit enter  
 
