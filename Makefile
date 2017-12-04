@@ -1,22 +1,22 @@
 CC=gcc
 CFLAGS=-c -O2 -Wall -g
 
-all: hw4
+all: smokers_problem
 
-hw4: binary_semaphore.o hw4.o
-	$(CC) binary_semaphore.o hw4.o -o hw4 -lpthread
+smokers_problem: binary_semaphore.o smokers_problem.o
+	$(CC) binary_semaphore.o smokers_problem.o -o smokers_problem -lpthread
 
 binary_semaphore.o: binary_semaphore.c
 	$(CC) $(CFLAGS) binary_semaphore.c
 
-hw4.o: hw4.c
-	$(CC) $(CFLAGS) hw4.c
+smokers_problem.o: smokers_problem.c
+	$(CC) $(CFLAGS) smokers_problem.c
 
 clean:
-	/bin/rm -f hw4 *.o *.gz
+	/bin/rm -f smokers_problem *.o *.gz
 
 run:
-	./hw4 3 5 7
+	./smokers_problem 3 5 7
 
 tarball:
 	# put your tar command here
