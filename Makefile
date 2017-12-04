@@ -16,7 +16,7 @@ clean:
 	/bin/rm -f hw4 *.o *.gz
 
 run:
-	./hw4 8 5 4
+	./hw4 3 5 7
 
 tarball:
 	# put your tar command here

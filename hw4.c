@@ -32,7 +32,7 @@ this will go away, as you complete the code.
 //          k < 0 : means guard is waiting in the room
 //          k = 0 : means guard is in the hall of department
 //          k > 0 : means guard is IN the room
-//int guard_state;         // waiting, in the hall, or in the room
+int agent_ready;         // 0 if not in room, 1 if in room
 //int num_students;        // number of students in the room
 
 
@@ -53,54 +53,76 @@ binary_semaphore table;  // to protect the table
 binary_semaphore papers; //semaphore for person who only has papers
 binary_semaphore tobacco; //semaphore for person who only has tobacco
 binary_semaphore lighter; //semaphore for person who only has lighter
+binary_semaphore smoking; //semaphore for when a person is smoking currently
+binary_semaphore mutex; //for shared variables
 
 //this function contains the logic for the agent
 inline void agent_place_table()
 {
+  //semWaitB(&mutex);
   int selected_package;
   //aquire semaphore for table so no one else can
-  //semWaitB(&table);
   //get a random number 1-3, this relates to what items agent places on table
-  selected_package = (rand() % 3) + 1;
+  selected_package = rand_range(&seeds[0], TOBACCO_PAPERS, LIGHTER_PAPERS);
+  //semSignalB(&mutex);
+  //printf("selected package is: %d\n", selected_package);
+  //makes agent wait until previous person is done smoking (if they are)
+//  semWaitB(&smoking);
+  //semSignalB(&smoking);
   if(selected_package == TOBACCO_PAPERS){
+    agent_ready = 1;
     printf("The agent is placing tobacco and rolling papers on the table \n");
+    //agent_ready = 1;
     semSignalB(&lighter);
   }else if(selected_package == LIGHTER_TOBACCO){
+    agent_ready = 1;
     printf("The agent is placing tobacco and a lighter on the table \n");
     semSignalB(&papers);
   }else{
+    agent_ready = 1;
     printf("The agent is placing a lighter and rolling papers on the table \n");
     semSignalB(&tobacco);
   }
   //wait on table to be released by the smoker once they finish smoking
   semWaitB(&table);
-  printf("The agent has finished waiting for the smoker to smoke \n");
-  printf("The agent will go outside for a while and then return \n");
-  semSignalB(&table);
+  agent_ready = 0;
+  //printf("The agent has finished waiting for the smoker to smoke \n");
+  printf("The agent will change the cigarette materials he has \n");
+  //semSignalB(&table);
 }
 
 inline void smoker_smoke(long id)
 {
   //aquire semaphore for the item that the smoker needs
   //then once signaled by the agent, the smoker will have all items needed
+  while(agent_ready != 1){
+    //do nothing, keep looping
+  }
   if(id == TOBACCO_PAPERS){
     semWaitB(&lighter);
     printf("The smoker with a lighter has acquired tobacco and rolling papers \n");
-    semSignalB(&lighter);
+    //semSignalB(&lighter);
   }else if(id == LIGHTER_TOBACCO){
     semWaitB(&papers);
     printf("The smoker with rolling papers has acquired tobacco and a lighter \n");
-    semSignalB(&papers);
+    //semSignalB(&papers);
   }else{
     semWaitB(&tobacco);
     printf("The smoker with tobacco has acquired a lighter and rolling papers \n");
-    semSignalB(&tobacco);
+    //semSignalB(&tobacco);
   }
-  printf("The smoker is now smoking for a bit \n" );
-  smoke(id);
-  printf("The smoker has finished smoking \n" );
+  //printf("The smoker is now smoking for a bit \n" );
+  //smoke(id);
+  //printf("The smoker has finished smoking \n" );
   //signal table so the agent can proceed to go outside
+  printf("The smoker has all the needed materials\n");
+  printf("The smoker is now smoking for a bit \n" );
+  //get smoking semaphore, prevents agent from proceeding with new materials
+  //until after smoking is completed.
+  //semWaitB(&smoking);
+  smoke(id);
   semSignalB(&table);
+//  semSignalB(&smoking);
 
 }
 
@@ -286,7 +308,7 @@ void* agent(void* arg)
   // walks the hallway
   for (i = 0; i < amount_of_stuff; i++) {
     agent_place_table();
-    agent_go_outside();
+    //agent_go_outside();
   }
 
   pthread_exit((void*)0);   // thread needs to return a void*
@@ -314,7 +336,7 @@ void* smoker(void* arg)
 
 int main(int argc, char** argv)  // the main function
 {
-  int n = 3;               // number of smoker threads
+  int n;               // number of smoker threads
   pthread_t  athread;      // agent thread
   pthread_t* sthreads;     // smoker threads
   long i;                  // loop control variable
@@ -326,7 +348,7 @@ int main(int argc, char** argv)  // the main function
 
   // TODO: get three input parameters, convert, and properly store
   // HINT: use atoi() function (see man page for more details).
-  //n = atoi(argv[1]);
+  n = atoi(argv[1]);
   //capacity = atoi(argv[2]);
   amount_of_stuff = atoi(argv[3]);
 
@@ -338,7 +360,7 @@ int main(int argc, char** argv)  // the main function
   sthreads = (pthread_t*) malloc(n*sizeof(pthread_t));
 
   // Initialize global variables and semaphores
-  //guard_state = 0;   // not in room (walking the hall)
+  agent_ready = 0;   // not in room (outside)
   //num_students = 0;  // number of students in the room
 
   //initialize semaphores to 0, so that they all function as blocks when waiting
@@ -347,6 +369,7 @@ int main(int argc, char** argv)  // the main function
   semInitB(&papers, 0);
   semInitB(&tobacco, 0);
   semInitB(&lighter, 0);
+  semInitB(&smoking, 1);
 
   // initialize agent seed and create the agent thread
   //seeds[0] = START_SEED;
