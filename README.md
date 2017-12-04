@@ -12,9 +12,9 @@ The process then repeats a designated number of times.
 Each of the three smokers and the agent are all threads
 A total of 4 binary semaphores have been declared in this program
 
-To run our program, clone our repository to a directory of your choosing
-Next, cd into the project and type: make
-Type: make run
-You will be then prompted for how many iterations you would like to occur
-Hit enter
+To run our program, clone our repository to a directory of your choosing  
+Next, cd into the project and type: make  
+Type: make run  
+You will be then prompted for how many iterations you would like to occur  
+Hit enter  
 
