@@ -1,6 +1,6 @@
 # CSCI340 Operating Systems Final Project
-#The Smoker Problem
-#Authors: Matthew Schwarz and Ricky Ramos
+#The Smoker Problem  
+#Authors: Matthew Schwarz and Ricky Ramos  
 
 The Cigarette Smokers Problem focuses on the topics of concurrency and threads.
 
