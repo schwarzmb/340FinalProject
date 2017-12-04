@@ -16,7 +16,7 @@ clean:
 	/bin/rm -f smokers_problem *.o *.gz
 
 run:
-	./smokers_problem 3 5 7
+	./smokers_problem 
 
 tarball:
 	# put your tar command here
